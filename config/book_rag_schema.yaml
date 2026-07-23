@@ -1,0 +1,27 @@
+index:
+  name: inkpulse_books_index
+  prefix: "book_rag:"
+  storage_type: hash
+
+fields:
+  - name: title
+    type: text
+
+  - name: author
+    type: text
+
+  - name: content
+    type: text
+
+  - name: genre
+    type: tag
+    attrs:
+      sortable: true
+
+  - name: vector
+    type: vector
+    attrs:
+      dims: 768
+      distance_metric: cosine
+      algorithm: flat
+      datatype: float32

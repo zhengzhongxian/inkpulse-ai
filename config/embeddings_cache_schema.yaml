@@ -1,0 +1,14 @@
+index:
+  name: ollama_embeddings_cache
+  prefix: ai:embeddings:
+  storage_type: hash
+
+fields:
+  - name: text
+    type: text
+  - name: embedding
+    type: vector
+    attrs:
+      dims: 768  # nomic-embed-text defaults to 768 dimensions
+      algorithm: hnsw
+      distance_metric: cosine
