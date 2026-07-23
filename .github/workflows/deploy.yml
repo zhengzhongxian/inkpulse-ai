@@ -57,6 +57,8 @@ jobs:
             --project renticar-478014
 
       - name: Smart ConfigMap Update & Deploy
+        env:
+          CONFIG_SECRET_CONTENT: ${{ secrets.CONFIG_AI_YAML }}
         run: |
           # Smart normalization helper function (ignores CRLF/LF & empty trailing lines)
           normalize_hash() {
@@ -68,8 +70,8 @@ jobs:
 
           # 2. Get new content from Secret or Repo File
           NEW_CONTENT=""
-          if [ -n "${{ secrets.CONFIG_AI_YAML }}" ]; then
-            NEW_CONTENT="${{ secrets.CONFIG_AI_YAML }}"
+          if [ -n "$CONFIG_SECRET_CONTENT" ]; then
+            NEW_CONTENT="$CONFIG_SECRET_CONTENT"
           elif [ -f config/config.yaml ]; then
             NEW_CONTENT=$(cat config/config.yaml)
           elif [ -f config.yaml ]; then
