@@ -1,0 +1,19 @@
+syntax = "proto3";
+package inkpulse.ai;
+
+option java_multiple_files = true;
+option java_package = "com.inkpulse.grpc.ai";
+
+service ChatService {
+  rpc ChatStream (ChatRequest) returns (stream ChatResponse);
+}
+
+message ChatRequest {
+  string user_id = 1;
+  string message = 2;
+}
+
+message ChatResponse {
+  string text = 1;
+  bool is_end = 2;
+}

@@ -1,0 +1,23 @@
+syntax = "proto3";
+package inkpulse.ai;
+
+option java_multiple_files = true;
+option java_package = "com.inkpulse.grpc.ai";
+
+service VisionService {
+  rpc AnalyzeImage (ImageAnalysisRequest) returns (ImageAnalysisResponse);
+}
+
+message ImageAnalysisRequest {
+  bytes image_data = 1;
+  string file_name = 2;
+  string content_type = 3;
+}
+
+message ImageAnalysisResponse {
+  bool is_book = 1;
+  bool is_electronically_marked = 2;
+  double confidence = 3;
+  string reason = 4;
+  bool cached = 5;
+}

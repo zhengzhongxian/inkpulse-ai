@@ -1,0 +1,17 @@
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+pyyaml>=6.0.1
+asyncpg>=0.29.0
+sqlalchemy>=2.0.28
+redis>=5.0.3
+redisvl>=0.1.2
+ollama>=0.1.7
+pillow>=10.2.0
+python-multipart>=0.0.9
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-ollama>=0.0.1

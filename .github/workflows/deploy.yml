@@ -1,0 +1,134 @@
+name: Deploy AI Service
+
+on:
+  push:
+    branches: [ main, master ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/inkpulse-ai
+
+jobs:
+  build-and-deploy:
+    name: 🐍 Build & Deploy Python AI Service
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+
+      - name: Set up Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+
+      - name: Smart ConfigMap Update & Deploy
+        run: |
+          # Smart normalization helper function (ignores CRLF/LF & empty trailing lines)
+          normalize_hash() {
+            echo "$1" | tr -d '\r' | sed -e 's/[[:space:]]*$//' -e '/^$/d' | sha256sum | awk '{print $1}'
+          }
+
+          # 1. Fetch current ConfigMap from K8s
+          OLD_CONTENT=$(kubectl get configmap ai-config -o jsonpath='{.data.config\.yaml}' 2>/dev/null || echo "")
+
+          # 2. Get new content from Secret or Repo File
+          NEW_CONTENT=""
+          if [ -n "${{ secrets.CONFIG_AI_YAML }}" ]; then
+            NEW_CONTENT="${{ secrets.CONFIG_AI_YAML }}"
+          elif [ -f config/config.yaml ]; then
+            NEW_CONTENT=$(cat config/config.yaml)
+          elif [ -f config.yaml ]; then
+            NEW_CONTENT=$(cat config.yaml)
+          fi
+
+          # 3. Compare normalized SHA256 hashes
+          OLD_HASH=$(normalize_hash "$OLD_CONTENT")
+          NEW_HASH=$(normalize_hash "$NEW_CONTENT")
+
+          CONFIG_CHANGED=false
+          if [ -n "$NEW_CONTENT" ] && [ "$OLD_HASH" != "$NEW_HASH" ]; then
+            echo "⚡ ConfigMap ai-config changed! Applying update..."
+            echo "$NEW_CONTENT" | kubectl create configmap ai-config --from-file=config.yaml=/dev/stdin -o yaml | kubectl apply -f -
+            CONFIG_CHANGED=true
+          else
+            echo "✅ [SKIP] ConfigMap ai-config has no meaningful changes (CRLF/whitespace ignored)."
+          fi
+
+          # 4. Set deployment image & rollout restart
+          kubectl set image deployment/ai-deployment app=${{ env.IMAGE_NAME }}:${{ github.sha }}
+          if [ "$CONFIG_CHANGED" = true ]; then
+            kubectl rollout restart deployment/ai-deployment
+          fi
+          kubectl rollout status deployment/ai-deployment --timeout=150s || {
+            echo "❌ Deploy failed! Auto rolling back to previous version..."
+            kubectl rollout undo deployment/ai-deployment
+            exit 1
+          }
+
+      - name: Post-Deploy Health Check
+        run: |
+          echo "🔍 Running post-deploy health check..."
+          kubectl wait --for=condition=ready pod -l app=ai-core --timeout=120s || {
+            echo "❌ Health check failed! Pods not ready."
+            kubectl rollout undo deployment/ai-deployment
+            exit 1
+          }
+          READY=$(kubectl get deployment ai-deployment -o jsonpath='{.status.readyReplicas}')
+          DESIRED=$(kubectl get deployment ai-deployment -o jsonpath='{.spec.replicas}')
+          echo "✅ Health check passed: $READY/$DESIRED pods ready and serving traffic."
+
+      - name: 🔔 Send Discord Notification
+        if: always()
+        run: |
+          if [ -z "${{ secrets.DISCORD_WEBHOOK }}" ]; then
+            echo "⚠️ DISCORD_WEBHOOK secret not found. Skipping notification."
+            exit 0
+          fi
+
+          if [ "${{ job.status }}" = "success" ]; then
+            COLOR=3066993
+            TITLE="🚀 AI Service Deploy Successful!"
+          else
+            COLOR=15158332
+            TITLE="❌ AI Service Deploy Failed!"
+          fi
+
+          curl -H "Content-Type: application/json" \
+            -X POST \
+            -d "{
+              \"embeds\": [{
+                \"title\": \"$TITLE\",
+                \"color\": $COLOR,
+                \"fields\": [
+                  {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\", \"inline\": true},
+                  {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true},
+                  {\"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true},
+                  {\"name\": \"Commit\", \"value\": \"${{ github.event.head_commit.message }}\"}
+                ],
+                \"footer\": {\"text\": \"InkPulse CI/CD Bot\"}
+              }]
+            }" ${{ secrets.DISCORD_WEBHOOK }}

@@ -1,0 +1,36 @@
+# Python Virtual Environments (Avoid uploading heavy site-packages to Git)
+.venv/
+venv/
+ENV/
+env/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Configuration & Secrets
+config/config.yaml
+config/*.yaml
+.env
+.env.*
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & Data
+*.log
+logs/
+
+# IDE & Editor Settings
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Mac & OS files
+.DS_Store
+Thumbs.db
