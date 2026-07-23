@@ -85,7 +85,7 @@ jobs:
           CONFIG_CHANGED=false
           if [ -n "$NEW_CONTENT" ] && [ "$OLD_HASH" != "$NEW_HASH" ]; then
             echo "⚡ ConfigMap ai-config changed! Applying update..."
-            echo "$NEW_CONTENT" | kubectl create configmap ai-config --from-file=config.yaml=/dev/stdin -o yaml | kubectl apply -f -
+            echo "$NEW_CONTENT" | kubectl create configmap ai-config --from-file=config.yaml=/dev/stdin --dry-run=client -o yaml | kubectl apply -f -
             CONFIG_CHANGED=true
           else
             echo "✅ [SKIP] ConfigMap ai-config has no meaningful changes (CRLF/whitespace ignored)."
