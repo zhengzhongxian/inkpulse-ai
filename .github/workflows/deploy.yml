@@ -91,11 +91,8 @@ jobs:
             echo "✅ [SKIP] ConfigMap ai-config has no meaningful changes (CRLF/whitespace ignored)."
           fi
 
-          # 4. Set deployment image & rollout restart
+          # 4. Set deployment image (triggers rollout automatically)
           kubectl set image deployment/ai-deployment app=${{ env.IMAGE_NAME }}:${{ github.sha }}
-          if [ "$CONFIG_CHANGED" = true ]; then
-            kubectl rollout restart deployment/ai-deployment
-          fi
           kubectl rollout status deployment/ai-deployment --timeout=300s || {
             echo "❌ Deploy failed! Auto rolling back to previous version..."
             kubectl rollout undo deployment/ai-deployment
