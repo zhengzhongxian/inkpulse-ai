@@ -40,11 +40,6 @@ jobs:
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
             ${{ env.IMAGE_NAME }}:latest
 
-      - name: Set up GKE auth plugin
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          install_components: 'gke-gcloud-auth-plugin'
-
       - name: Set up Kubeconfig
         run: |
           mkdir -p ~/.kube
