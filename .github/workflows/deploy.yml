@@ -113,6 +113,8 @@ jobs:
 
       - name: 🔔 Send Discord Notification
         if: always()
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "${{ secrets.DISCORD_WEBHOOK }}" ]; then
             echo "⚠️ DISCORD_WEBHOOK secret not found. Skipping notification."
@@ -127,18 +129,31 @@ jobs:
             TITLE="❌ AI Service Deploy Failed!"
           fi
 
+          # Clean & format commit message to single line safely
+          CLEAN_MSG=$(echo "$COMMIT_MSG" | head -n 5 | tr '\n' ' ')
+
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg color "$COLOR" \
+            --arg repo "${{ github.repository }}" \
+            --arg branch "${{ github.ref_name }}" \
+            --arg author "${{ github.actor }}" \
+            --arg commit "$CLEAN_MSG" \
+            '{
+              embeds: [{
+                title: $title,
+                color: ($color | tonumber),
+                fields: [
+                  {name: "Repository", value: $repo, inline: true},
+                  {name: "Branch", value: $branch, inline: true},
+                  {name: "Author", value: $author, inline: true},
+                  {name: "Commit", value: $commit}
+                ],
+                footer: {text: "InkPulse CI/CD Bot"}
+              }]
+            }')
+
           curl -H "Content-Type: application/json" \
             -X POST \
-            -d "{
-              \"embeds\": [{
-                \"title\": \"$TITLE\",
-                \"color\": $COLOR,
-                \"fields\": [
-                  {\"name\": \"Repository\", \"value\": \"${{ github.repository }}\", \"inline\": true},
-                  {\"name\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"inline\": true},
-                  {\"name\": \"Author\", \"value\": \"${{ github.actor }}\", \"inline\": true},
-                  {\"name\": \"Commit\", \"value\": \"${{ github.event.head_commit.message }}\"}
-                ],
-                \"footer\": {\"text\": \"InkPulse CI/CD Bot\"}
-              }]
-            }" ${{ secrets.DISCORD_WEBHOOK }}
+            -d "$PAYLOAD" \
+            "${{ secrets.DISCORD_WEBHOOK }}"
