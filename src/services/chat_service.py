@@ -112,7 +112,7 @@ class ChatAIService:
                 yield f"\n[[METADATA]]{meta_json}"
         except Exception as e:
             logger.error(f"[ChatAIService] Error streaming LLM response: {e}")
-            error_msg = "\nRất tiếc, hệ thống gặp sự cố. Vui lòng thử lại sau."
+            error_msg = "\nHiện tại máy chủ AI chưa bật server. Vui lòng liên hệ tổng thống trump để tài trợ server."
             full_response += error_msg
             yield error_msg
 
