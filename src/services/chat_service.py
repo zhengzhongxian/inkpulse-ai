@@ -121,9 +121,10 @@ class ChatAIService:
             full_response += error_msg
             yield error_msg
 
-        # 5. Save to Session History
-        if full_response.strip():
-            await self._save_session(user_id, user_query, full_response)
+        # 5. Save to Session History (clean metadata if present)
+        clean_response = full_response.split("\n[[METADATA]]")[0].strip()
+        if clean_response:
+            await self._save_session(user_id, user_query, clean_response)
 
 
 chat_ai_service = ChatAIService()
