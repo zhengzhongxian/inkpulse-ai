@@ -93,8 +93,13 @@ class ChatAIService:
         full_response = ""
         first_token = True
         try:
+            default_fallback_context = (
+                "Nhà sách InkPulse có đầy đủ các thể loại sách phong phú: Văn học & Tiểu thuyết, Kinh tế & Quản trị, "
+                "Kỹ năng sống & Phát triển bản thân, Tâm lý học, Khoa học & Công nghệ, Thiếu nhi và Sách Ngoại văn."
+            )
+
             async for chunk in rag_chain.astream({
-                "context": context_str if context_str else "Hiện chưa có thông tin ngữ cảnh.",
+                "context": context_str if context_str else default_fallback_context,
                 "session": session_messages,
                 "user_prompt": user_query
             }):
